@@ -18,7 +18,9 @@ for i in range(8):
     expect_gdb(' = %d'%(i + 10))
 
 send_gdb('show architecture')
-have_64 = 0 == expect_list([re.compile('i386:x86-64"?\)'), re.compile('i386"?\)')])
+have_64 = (
+    expect_list([re.compile('i386:x86-64"?\)'), re.compile('i386"?\)')]) == 0
+)
 
 if have_64:
     for i in range(8,16):
@@ -26,7 +28,7 @@ if have_64:
         expect_gdb(' = %d'%(i + 10))
 
 send_gdb('p AVX_enabled')
-have_AVX = 0 == expect_list([re.compile(' = 1'), re.compile(' = 0')])
+have_AVX = expect_list([re.compile(' = 1'), re.compile(' = 0')]) == 0
 
 if have_AVX:
     for i in range(8):

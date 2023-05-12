@@ -40,21 +40,15 @@ def seek_nth_section_sh_offset(f, shtable, e_shentsize, n, offset):
 	f.seek(shtable + n*e_shentsize + offset)
 
 def read_uptr(is64, f):
-	if is64:
-		return read_uint64(f)
-	else:
-		return read_uint32(f)
+	return read_uint64(f) if is64 else read_uint32(f)
 
 def write_uptr(is64, f, v):
-	if is64:
-		return write_uint64(f, v)
-	else:
-		return write_uint32(f, v)
+	return write_uint64(f, v) if is64 else write_uint32(f, v)
 
 with open(sys.argv[1], 'rb+') as f:
 	assert f.read(4) == b'\x7fELF'
 	elfclass = read_byte(f)
-	assert (elfclass == ELFCLASS32) or (elfclass == ELFCLASS64)
+	assert elfclass in [ELFCLASS32, ELFCLASS64]
 	is64 = elfclass == ELFCLASS64
 
 	# Hardcoded offsets for fields of the ELF header - a more sophisticated

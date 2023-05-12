@@ -9,7 +9,7 @@ import syscalls
 
 def arch_syscall_number(arch, syscall):
     s = getattr(syscall[1], arch)
-    if s == None:
+    if s is None:
         s = -1
     return s
 
@@ -64,10 +64,11 @@ def write_syscallname_arch(f):
 
 def write_syscall_record_cases(f):
     def write_recorder_for_arg(syscall, arg):
-        arg_descriptor = getattr(syscall, 'arg' + str(arg), None)
+        arg_descriptor = getattr(syscall, f'arg{str(arg)}', None)
         if isinstance(arg_descriptor, str):
             f.write("    syscall_state.reg_parameter<%s>(%d);\n"
                     % (arg_descriptor, arg))
+
     for name, obj in syscalls.all():
         # Irregular syscalls will be handled by hand-written code elsewhere.
         if isinstance(obj, syscalls.RegularSyscall):

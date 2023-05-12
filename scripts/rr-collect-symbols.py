@@ -40,11 +40,7 @@ if len(sys.argv) < 2:
     sys.exit(1)
 trace_dir = sys.argv[1]
 
-if len(sys.argv) < 3:
-    source = "/usr/lib/debug"
-else:
-    source = sys.argv[2]
-
+source = "/usr/lib/debug" if len(sys.argv) < 3 else sys.argv[2]
 rr_buildid = subprocess.Popen(["rr", "buildid"],
                               stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE)
@@ -55,7 +51,10 @@ def build_id_for(file):
     try:
         rr_buildid.stdin.flush()
     except BrokenPipeError:
-        print("Can't write to rr, termination code %s"%rr_buildid.returncode, file=sys.stderr)
+        print(
+            f"Can't write to rr, termination code {rr_buildid.returncode}",
+            file=sys.stderr,
+        )
         sys.exit(2)
     return rr_buildid.stdout.readline().rstrip().decode('utf-8')
 
@@ -65,8 +64,7 @@ def find_altref(file):
     proc = subprocess.Popen(["readelf", "-p", ".gnu_debugaltlink", file], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     try:
         for line in proc.stdout:
-            m = altref_regex.match(line)
-            if m:
+            if m := altref_regex.match(line):
                 return m.group(1).rstrip()
     finally:
         proc.wait()
@@ -88,9 +86,7 @@ def mkdir_p(path):
     try:
         os.makedirs(path)
     except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-            pass
-        else:
+        if exc.errno != errno.EEXIST or not os.path.isdir(path):
             raise
 
 # 'dst' must be a complete file name, not a directory.
@@ -114,19 +110,17 @@ def create_link(src, dst):
 
 def collect_trace_build_ids():
     ret = {}
-    for file in glob.iglob("%s/mmap_*"%trace_dir):
-        build_id = build_id_for(file)
-        if build_id:
+    for file in glob.iglob(f"{trace_dir}/mmap_*"):
+        if build_id := build_id_for(file):
             ret[build_id] = True
-            altref = find_altref(file)
-            if altref:
+            if altref := find_altref(file):
                 altref_file = find_altref_for_trace_file(file, altref)
                 if not altref_file:
-                    print("WARNING: Can't find alt file %s for %s"%(altref, file))
+                    print(f"WARNING: Can't find alt file {altref} for {file}")
                     continue
-                dir = "%s/debug/.build-id/%s"%(trace_dir, build_id[:2])
+                dir = f"{trace_dir}/debug/.build-id/{build_id[:2]}"
                 mkdir_p(dir)
-                copy_file(altref_file, "%s/%s.sup"%(dir, build_id[2:]))
+                copy_file(altref_file, f"{dir}/{build_id[2:]}.sup")
     return ret
 
 trace_build_ids = collect_trace_build_ids()
@@ -135,14 +129,14 @@ def collect_archive(url):
     is_tar_zst = url.endswith(".tar.zst")
     tmp_dir = tempfile.mkdtemp(dir=trace_dir)
     if is_tar_zst:
-        tmp_file_name = "%s/archive.tar.zst"%tmp_dir
+        tmp_file_name = f"{tmp_dir}/archive.tar.zst"
     else:
         # Assume its a ZIP
-        tmp_file_name = "%s/archive.zip"%tmp_dir
+        tmp_file_name = f"{tmp_dir}/archive.zip"
     try:
         (file, headers) = urlretrieve(url, tmp_file_name)
     except (HTTPError, ContentTooShortError) as exc:
-        print("Failed to load archive %s: %s"%(url, exc), file=sys.stderr)
+        print(f"Failed to load archive {url}: {exc}", file=sys.stderr)
         sys.exit(2)
     if is_tar_zst:
         subprocess.check_call(["tar", "-C", tmp_dir, "-I", "zstd", "-xvf", file])
@@ -158,9 +152,9 @@ def collect_archive(url):
                 file = file[:-3]
             build_id = build_id_for(file)
             if build_id and build_id in trace_build_ids:
-                dir = "%s/debug/.build-id/%s"%(trace_dir, build_id[:2])
+                dir = f"{trace_dir}/debug/.build-id/{build_id[:2]}"
                 mkdir_p(dir)
-                dst = "%s/%s.debug"%(dir, build_id[2:])
+                dst = f"{dir}/{build_id[2:]}.debug"
                 os.rename(file, dst)
             else:
                 os.remove(file)
@@ -174,26 +168,25 @@ def collect_filesystem(path):
             if not os.path.islink(file):
                 build_id = build_id_for(file)
                 if build_id and build_id in trace_build_ids:
-                    dir = "%s/debug/.build-id/%s"%(trace_dir, build_id[:2])
+                    dir = f"{trace_dir}/debug/.build-id/{build_id[:2]}"
                     mkdir_p(dir)
-                    copy_file(file, "%s/%s.debug"%(dir, build_id[2:]))
-                    altref = find_altref(file)
-                    if altref:
+                    copy_file(file, f"{dir}/{build_id[2:]}.debug")
+                    if altref := find_altref(file):
                         altref = altref.decode('utf-8')
                         altref_file = os.path.join(os.path.dirname(file), altref)
-                        copy_file(altref_file, "%s/%s.sup"%(dir, build_id[2:]))
+                        copy_file(altref_file, f"{dir}/{build_id[2:]}.sup")
                         if altref.startswith("../../../.dwz/"):
-                            mkdir_p("%s/.dwz"%trace_dir)
-                            src = "../debug/.build-id/%s/%s.sup"%(build_id[:2], build_id[2:])
-                            create_link(src, "%s/.dwz/%s"%(trace_dir, altref[14:]))
+                            mkdir_p(f"{trace_dir}/.dwz")
+                            src = f"../debug/.build-id/{build_id[:2]}/{build_id[2:]}.sup"
+                            create_link(src, f"{trace_dir}/.dwz/{altref[14:]}")
                         elif altref.startswith("../../.dwz/"):
-                            mkdir_p("%s/debug/.dwz"%trace_dir)
-                            src = "../.build-id/%s/%s.sup"%(build_id[:2], build_id[2:])
-                            create_link(src, "%s/debug/.dwz/%s"%(trace_dir, altref[11:]))
+                            mkdir_p(f"{trace_dir}/debug/.dwz")
+                            src = f"../.build-id/{build_id[:2]}/{build_id[2:]}.sup"
+                            create_link(src, f"{trace_dir}/debug/.dwz/{altref[11:]}")
                         elif altref.startswith("../.dwz/"):
-                            mkdir_p("%s/debug/.build-id/.dwz"%trace_dir)
-                            src = "../%s/%s.sup"%(build_id[:2], build_id[2:])
-                            create_link(src, "%s/debug/.build-id/.dwz/%s"%(trace_dir, altref[8:]))
+                            mkdir_p(f"{trace_dir}/debug/.build-id/.dwz")
+                            src = f"../{build_id[:2]}/{build_id[2:]}.sup"
+                            create_link(src, f"{trace_dir}/debug/.build-id/.dwz/{altref[8:]}")
 
 if re.search("^[^:/]+:", source):
     collect_archive(source)

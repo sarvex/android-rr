@@ -10,11 +10,9 @@ def observe_child_crash_and_exit():
 
     send_gdb('c')
     for line in iterlines_both():
-        m = re.search(BAD_TOKEN, line)
-        if m:
-            failed('Saw illegal token "'+ BAD_TOKEN +'"')
-        m = re.search(GOOD_TOKEN, line)
-        if m:
+        if m := re.search(BAD_TOKEN, line):
+            failed(f'Saw illegal token "{BAD_TOKEN}"')
+        if m := re.search(GOOD_TOKEN, line):
             return
 
 send_gdb('c')

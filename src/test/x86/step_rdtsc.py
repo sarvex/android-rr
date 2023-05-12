@@ -19,6 +19,6 @@ expect_gdb(re.compile(r'=> ([0-9a-fx]+) '))
 addr2 = last_match().group(1)
 
 if eval(addr) + 2 != eval(addr2):
-  failed("stepi from rdtsc at %s ended at incorrect %s" % (addr, addr2));
+  failed(f"stepi from rdtsc at {addr} ended at incorrect {addr2}");
 
 ok()

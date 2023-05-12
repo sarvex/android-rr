@@ -12,7 +12,7 @@ class BaseSyscall(object):
         self.x86 = x86
         self.x64 = x64
         self.generic = generic
-        assert len(kwargs) == 0
+        assert not kwargs
 
 class RestartSyscall(BaseSyscall):
     """A special class for the restart_syscall syscall."""
@@ -54,7 +54,7 @@ class RegularSyscall(BaseSyscall):
     """
     def __init__(self, **kwargs):
         for a in range(1,6):
-            arg = 'arg' + str(a)
+            arg = f'arg{str(a)}'
             if arg in kwargs:
                 self.__setattr__(arg, kwargs[arg])
                 kwargs.pop(arg)

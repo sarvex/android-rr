@@ -12,7 +12,7 @@ expect_gdb('Breakpoint 2')
 
 # step through mprotect() until we reach the system call that
 # gets performed during replay
-for i in range(0,200):
+for _ in range(0,200):
     send_gdb('stepi')
     expect_gdb('(rr)')
 

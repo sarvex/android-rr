@@ -77,7 +77,7 @@ def clean_up():
             gdb_rr = None
         except Exception as e:
             if iterations < 5:
-                print("close() failed with '%s', retrying..."%e)
+                print(f"close() failed with '{e}', retrying...")
                 iterations = iterations + 1
             else:
                 gdb_rr = None
@@ -86,7 +86,7 @@ def expect(prog, what):
     try:
         prog.expect(what)
     except Exception as e:
-        failed('expecting "%s"'% (what), e)
+        failed(f'expecting "{what}"', e)
 
 def get_exe_arch():
     send_gdb('show architecture')
@@ -111,7 +111,7 @@ def send(prog, what):
     try:
         prog.send(what)
     except Exception as e:
-        failed('sending "%s"'% (what), e)
+        failed(f'sending "{what}"', e)
 
 def set_up():
     global gdb_rr

@@ -12,9 +12,9 @@ expect_gdb('Breakpoint 2')
 send_gdb('c')
 expect_gdb('Breakpoint 2, ready')
 
-bps = set(('A', 'B', 'C'))
+bps = {'A', 'B', 'C'}
 for bp in bps:
-    send_gdb('b '+ bp +'')
+    send_gdb(f'b {bp}')
     expect_gdb('Breakpoint \d')
 
 expect_gdb(r'\(rr\)')
@@ -32,15 +32,15 @@ while 1:
     send_gdb(next_cmd)
     next_cmd = 's'
     i = expect_list(events)
-    if 0 == i:
+    if i == 0:
         break
-    if 2 == i or 3 == i:
+    if i in [2, 3]:
         assert False, 'Program stopped unexpectedly, review gdb_rr.log'
-    if 4 == i:
+    if i == 4:
         expect_gdb(r'\(rr\)')
         next_cmd = 'stepi'
         continue
-    if 5 == i:
+    if i == 5:
         continue
 
     bp = last_match().group(1)
@@ -48,8 +48,8 @@ while 1:
     hit_bps[bp] = 1
     expect_gdb(r'\(rr\)')
 
-for bp in hit_bps.keys():
-    assert hit_bps[bp]
+for value in hit_bps.values():
+    assert value
 
 arch = get_exe_arch()
 

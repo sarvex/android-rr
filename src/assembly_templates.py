@@ -52,7 +52,7 @@ class AssemblyTemplate(object):
         merged_chunks = []
         current_raw_bytes = []
         for c in chunks:
-            if isinstance(c, Field) or isinstance(c, ShiftField):
+            if isinstance(c, (Field, ShiftField)):
                 # Push any raw bytes before this.
                 if current_raw_bytes:
                     merged_chunks.append(RawBytes(*current_raw_bytes))
@@ -66,7 +66,7 @@ class AssemblyTemplate(object):
         self.chunks = merged_chunks
 
     def fields(self):
-        return [c for c in self.chunks if (isinstance(c, Field) or isinstance(c, ShiftField))]
+        return [c for c in self.chunks if isinstance(c, (Field, ShiftField))]
 
     def bytes(self):
         bytes = []
@@ -225,15 +225,18 @@ templates = {
 }
 
 def byte_array_name(name):
-    return '%s_bytes' % name
+    return f'{name}_bytes'
 
 def generate_match_method(byte_array, template):
     s = StringIO()
     fields = template.fields()
     field_types = [f.c_type() for f in fields]
     field_names = [f.name for f in fields]
-    args = ', ' + ', '.join("%s* %s" % (t, n) for t, n in zip(field_types, field_names)) \
-           if fields else ''
+    args = (
+        ', ' + ', '.join(f"{t}* {n}" for t, n in zip(field_types, field_names))
+        if fields
+        else ''
+    )
 
     s.write('  static bool match(const uint8_t* buffer %s) {\n' % (args,))
     offset = 0
@@ -243,7 +246,7 @@ def generate_match_method(byte_array, template):
             s.write('    memcpy(%s, &buffer[%d], sizeof(*%s));\n'
                     % (field_name, offset, field_name))
         elif isinstance(chunk, ShiftField):
-            s.write('    (void)%s;' % chunk.name)
+            s.write(f'    (void){chunk.name};')
             s.write('    assert(0 && "Matching not implemented for ShiftField");')
         else:
             s.write('    if (memcmp(&buffer[%d], &%s[%d], %d) != 0) { return false; }\n'
@@ -275,8 +278,11 @@ def generate_substitute_method(byte_array, template):
     fields = template.fields()
     field_types = [f.c_type() for f in fields]
     field_names = [f.name for f in fields]
-    args = ', ' + ', '.join("%s %s" % (t, n) for t, n in zip(field_types, field_names)) \
-           if fields else ''
+    args = (
+        ', ' + ', '.join(f"{t} {n}" for t, n in zip(field_types, field_names))
+        if fields
+        else ''
+    )
 
     s.write('  static void substitute(uint8_t* buffer %s) {\n' % (args,))
     offset = 0
@@ -296,7 +302,7 @@ def generate_field_end_methods(byte_array, template):
 
 def generate_size_member(byte_array):
     s = StringIO()
-    s.write('  static const size_t size = sizeof(%s);' % byte_array)
+    s.write(f'  static const size_t size = sizeof({byte_array});')
     return s.getvalue()
 
 def generate(f):

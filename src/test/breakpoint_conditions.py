@@ -1,10 +1,10 @@
 from util import *
 
 def test_cond(c):
-    send_gdb('cond 1 %s'%c)
+    send_gdb(f'cond 1 {c}')
     # check that the condition is evaluated correctly by checking that
     # we don't break on the negation of the condition
-    send_gdb('cond 2 !(%s)'%c)
+    send_gdb(f'cond 2 !({c})')
     send_gdb('c')
     expect_gdb('Breakpoint 1')
 

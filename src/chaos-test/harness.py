@@ -24,16 +24,22 @@ def run(rr_params):
     try:
         env = copy.copy(os.environ)
         env['_RR_TRACE_DIR'] = d
-        with open(d + "/out", 'w') as out:
-            p = subprocess.Popen(["%s/bin/rr"%objdir, "record"] + rr_params + ["%s/bin/%s"%(objdir, name)] + params, env=env,
-                stdout=out, stderr=out)
+        with open(f"{d}/out", 'w') as out:
+            p = subprocess.Popen(
+                [f"{objdir}/bin/rr", "record"]
+                + rr_params
+                + [f"{objdir}/bin/{name}"]
+                + params,
+                env=env,
+                stdout=out,
+                stderr=out,
+            )
             ret = p.wait()
-        if ret != 0 and ret != GOOD_FAIL:
-            print("Test %s failed unexpectedly; leaving behind trace in %s"%(name, d))
+        if ret not in [0, GOOD_FAIL]:
+            print(f"Test {name} failed unexpectedly; leaving behind trace in {d}")
         out_array = []
-        with open(d + "/out", 'r') as out:
-            for line in out:
-                out_array.append(line)
+        with open(f"{d}/out", 'r') as out:
+            out_array.extend(iter(out))
         return [ret, out_array]
     finally:
         shutil.rmtree(d)

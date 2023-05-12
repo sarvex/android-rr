@@ -19,13 +19,11 @@ while True:
     line = sys.stdin.readline()
     if not line:
         sys.exit(0)
-    m = syscall_re.search(line)
-    if m:
-        if m.group(1) == syscall:
+    if m := syscall_re.search(line):
+        if m[1] == syscall:
             line = sys.stdin.readline()
-            m = perfctr_re.search(line)
-            if m:
-                v = int(m.group(1))
+            if m := perfctr_re.search(line):
+                v = int(m[1])
                 if last_perfctr_value >= 0 and v - last_perfctr_value != expected_count:
                     print("Mismatch: saw %d %ss between %ss (from %d to %d), expected %d" % \
                       (v - last_perfctr_value, counter, syscall, last_perfctr_value, v, expected_count))
